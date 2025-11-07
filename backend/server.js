@@ -200,8 +200,8 @@ app.delete('/api/images/cleanup', (req, res) => {
 
 // ✅ ✅ React frontend fallback (* THIS FIXES "Cannot GET /" *)
 app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendDist, 'index.html'));
-});
+    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+})
 
 // Start server
 app.listen(PORT, () => {
