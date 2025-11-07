@@ -7,16 +7,13 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ----- FRONTEND BUILD PATH -----
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
 
-// Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Multer storage for images
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
@@ -27,23 +24,19 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsDir));
 
-// ✅ Serve React frontend build
 app.use(express.static(frontendDist));
 
-// In-memory storage for latest AI recognition result
 let latestRecognition = {
     recognized: false,
     message: "Waiting for first recognition...",
     timestamp: new Date().toISOString()
 };
 
-// ✅ POST endpoint - receives AI webhook
 app.post('/api/face-recognition', upload.fields([
     { name: 'originPic', maxCount: 1 },
     { name: 'bodyPic', maxCount: 1 },
@@ -52,18 +45,14 @@ app.post('/api/face-recognition', upload.fields([
     try {
         console.log("==== 📩 NEW FACE RECOGNITION REQUEST RECEIVED ====");
 
-        // Log raw body data
         console.log("➡️ Raw body:", req.body);
 
-        // Log raw "data" JSON if present
         if (req.body.data) {
             console.log("➡️ Received data JSON string:", req.body.data);
         }
 
-        // Log files
         console.log("➡️ Uploaded files:", req.files);
 
-        // Log headers
         console.log("➡️ Request headers:", req.headers);
 
         let dataArray = [];
@@ -87,7 +76,6 @@ app.post('/api/face-recognition', upload.fields([
         const bodyPicUrl = files.bodyPic ? `${baseUrl}/uploads/${files.bodyPic[0].filename}` : null;
         const facePicUrl = files.facePic ? `${baseUrl}/uploads/${files.facePic[0].filename}` : null;
 
-        // Not recognized
         if (!data.personId || !data.name) {
             console.log("⚠️ Face NOT recognized. Saving unrecognized result.");
 
@@ -114,7 +102,6 @@ app.post('/api/face-recognition', upload.fields([
             return res.json({ success: true, recognized: false, message: "No user match" });
         }
 
-        // Recognized
         console.log("✅ Face recognized:", data.name);
 
         latestRecognition = {
@@ -170,12 +157,10 @@ app.post('/api/face-recognition', upload.fields([
 });
 
 
-// ✅ GET endpoint for latest recognition
 app.get('/api/face-recognition/latest', (req, res) => {
     res.json(latestRecognition);
 });
 
-// Health check
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -184,7 +169,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Get all images
 app.get('/api/images', (req, res) => {
     try {
         const files = fs.readdirSync(uploadsDir);
@@ -202,7 +186,6 @@ app.get('/api/images', (req, res) => {
     }
 });
 
-// Delete old images
 app.delete('/api/images/cleanup', (req, res) => {
     try {
         const files = fs.readdirSync(uploadsDir);
@@ -226,16 +209,13 @@ app.delete('/api/images/cleanup', (req, res) => {
     }
 });
 
-// ✅ ✅ Express 5–compatible fallback for SPA
-// (Replaces app.get("*") which causes PathError)
+
 app.use((req, res, next) => {
-    // Skip API routes
     if (req.path.startsWith('/api')) return next();
 
     res.sendFile(path.join(frontendDist, 'index.html'));
 });
 
-// Start server
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
