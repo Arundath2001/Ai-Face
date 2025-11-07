@@ -50,16 +50,35 @@ app.post('/api/face-recognition', upload.fields([
     { name: 'facePic', maxCount: 1 }
 ]), (req, res) => {
     try {
+        console.log("==== 📩 NEW FACE RECOGNITION REQUEST RECEIVED ====");
+
+        // Log raw body data
+        console.log("➡️ Raw body:", req.body);
+
+        // Log raw "data" JSON if present
+        if (req.body.data) {
+            console.log("➡️ Received data JSON string:", req.body.data);
+        }
+
+        // Log files
+        console.log("➡️ Uploaded files:", req.files);
+
+        // Log headers
+        console.log("➡️ Request headers:", req.headers);
+
         let dataArray = [];
         if (req.body.data) {
             try {
                 dataArray = JSON.parse(req.body.data);
+                console.log("✅ Parsed data array:", dataArray);
             } catch (e) {
+                console.error("❌ Error parsing data JSON:", e.message);
                 return res.status(400).json({ success: false, error: "Invalid JSON in data field" });
             }
         }
 
         const data = dataArray[0] || {};
+        console.log("✅ Final parsed data object:", data);
 
         const baseUrl = `${req.protocol}://${req.get('host')}`;
         const files = req.files || {};
@@ -70,6 +89,8 @@ app.post('/api/face-recognition', upload.fields([
 
         // Not recognized
         if (!data.personId || !data.name) {
+            console.log("⚠️ Face NOT recognized. Saving unrecognized result.");
+
             latestRecognition = {
                 recognized: false,
                 message: "No user match",
@@ -89,10 +110,13 @@ app.post('/api/face-recognition', upload.fields([
                 rawData: data
             };
 
+            console.log("✅ Saved unrecognized data:", latestRecognition);
             return res.json({ success: true, recognized: false, message: "No user match" });
         }
 
         // Recognized
+        console.log("✅ Face recognized:", data.name);
+
         latestRecognition = {
             recognized: true,
             name: data.name,
@@ -135,12 +159,16 @@ app.post('/api/face-recognition', upload.fields([
             rawData: data
         };
 
+        console.log("✅ Saved recognized data:", latestRecognition);
+
         return res.json({ success: true, recognized: true, name: data.name });
 
     } catch (error) {
+        console.error("🔥 SERVER ERROR:", error.message);
         return res.status(500).json({ success: false, error: error.message });
     }
 });
+
 
 // ✅ GET endpoint for latest recognition
 app.get('/api/face-recognition/latest', (req, res) => {
