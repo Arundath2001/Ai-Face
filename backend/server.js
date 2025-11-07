@@ -198,10 +198,14 @@ app.delete('/api/images/cleanup', (req, res) => {
     }
 });
 
-// ✅ ✅ React frontend fallback (* THIS FIXES "Cannot GET /" *)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
-})
+// ✅ ✅ Express 5–compatible fallback for SPA
+// (Replaces app.get("*") which causes PathError)
+app.use((req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api')) return next();
+
+    res.sendFile(path.join(frontendDist, 'index.html'));
+});
 
 // Start server
 app.listen(PORT, () => {
