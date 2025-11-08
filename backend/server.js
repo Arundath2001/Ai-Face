@@ -20,11 +20,11 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
-    filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+    filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
 });
 const upload = multer({
     storage,
-    limits: { fileSize: 10 * 1024 * 1024 },
+    limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 app.use(cors());
@@ -65,13 +65,15 @@ app.post('/api/face-recognition', upload.any(), async (req, res) => {
         const baseUrl = `${req.protocol}://${req.get('host')}`;
 
         const byName = name => (req.files || []).find(f => f.fieldname === name);
-
         const origin = byName('originPic') || null;
         const body = byName('bodyPic') || null;
 
         const urlOrNull = f => (f ? `${baseUrl}/uploads/${f.filename}` : null);
 
         if (!data.personId || !data.name) {
+            if (origin) fs.unlinkSync(path.join(uploadsDir, origin.filename));
+            if (body) fs.unlinkSync(path.join(uploadsDir, body.filename));
+
             latestRecognition = {
                 recognized: false,
                 message: "No user match",
@@ -83,13 +85,13 @@ app.post('/api/face-recognition', upload.any(), async (req, res) => {
                     trackId: data.trackId || null
                 },
                 images: {
-                    originPic: urlOrNull(origin),
-                    bodyPic: urlOrNull(body),
+                    originPic: null,
+                    bodyPic: null,
                     facePic: null
                 },
                 rawData: data
             };
-            console.log("💾 Saved UNRECOGNIZED");
+
             return res.json({ success: true, recognized: false });
         }
 
@@ -100,19 +102,22 @@ app.post('/api/face-recognition', upload.any(), async (req, res) => {
             const savePath = path.join(uploadsDir, `${Date.now()}-${path.basename(data.facePic)}`);
 
             try {
-                const result = await axios.get(deviceUrl, { responseType: "arraybuffer", timeout: 5000 });
-                fs.writeFileSync(savePath, result.data);
+                const response = await axios.get(deviceUrl, {
+                    responseType: "arraybuffer",
+                    timeout: 5000
+                });
+                fs.writeFileSync(savePath, response.data);
                 savedFacePicUrl = `${baseUrl}/uploads/${path.basename(savePath)}`;
             } catch (err) {
-                console.log("Unable to download facePic:", err.message);
+                console.log("FacePic download failed:", err.message);
             }
         }
 
         latestRecognition = {
             recognized: true,
             name: data.name,
-            personCode: data.personCode,
             personId: data.personId,
+            personCode: data.personCode,
             groupName: data.groupName,
             captureTime: data.captureTime,
             deviceIp: data.deviceIp,
@@ -120,8 +125,8 @@ app.post('/api/face-recognition', upload.any(), async (req, res) => {
             deviceNo: data.deviceNo,
             timestamp: new Date().toISOString(),
             images: {
-                originPic: urlOrNull(origin),
-                bodyPic: urlOrNull(body),
+                originPic: null,
+                bodyPic: null,
                 facePic: savedFacePicUrl
             },
             metadata: {
@@ -134,7 +139,9 @@ app.post('/api/face-recognition', upload.any(), async (req, res) => {
             rawData: data
         };
 
-        console.log("💾 Saved RECOGNIZED");
+        if (origin) fs.unlinkSync(path.join(uploadsDir, origin.filename));
+        if (body) fs.unlinkSync(path.join(uploadsDir, body.filename));
+
         res.json({ success: true, recognized: true, name: data.name });
 
     } catch (err) {
@@ -146,6 +153,21 @@ app.post('/api/face-recognition', upload.any(), async (req, res) => {
 app.get('/api/face-recognition/latest', (req, res) => {
     res.json(latestRecognition);
 });
+
+setInterval(() => {
+    const now = Date.now();
+    const maxAge = 6 * 60 * 60 * 1000;
+
+    fs.readdirSync(uploadsDir).forEach(file => {
+        const filePath = path.join(uploadsDir, file);
+        const stats = fs.statSync(filePath);
+
+        if (now - stats.mtimeMs > maxAge) {
+            fs.unlinkSync(filePath);
+            console.log("🗑️ Deleted old file:", file);
+        }
+    });
+}, 10 * 60 * 1000);
 
 app.use((req, res, next) => {
     if (req.path.startsWith('/api')) return next();
