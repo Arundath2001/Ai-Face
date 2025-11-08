@@ -8,12 +8,14 @@ export default function App() {
       const res = await fetch("/api/face-recognition/latest");
       const json = await res.json();
       setData(json);
-    } catch {}
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
   };
 
   useEffect(() => {
     fetchLatest();
-    const id = setInterval(fetchLatest, 4000);
+    const id = setInterval(fetchLatest, 3000);
     return () => clearInterval(id);
   }, []);
 
@@ -25,8 +27,10 @@ export default function App() {
 
       {data && (
         <div className="w-full max-w-3xl bg-white shadow-lg rounded-2xl p-6">
+          {/* Title + Status */}
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Latest Recognition</h2>
+
             <span
               className={`px-3 py-1 rounded-full text-white text-sm ${
                 data.recognized ? "bg-green-600" : "bg-red-600"
@@ -36,6 +40,7 @@ export default function App() {
             </span>
           </div>
 
+          {/* If recognized show details */}
           {data.recognized ? (
             <div className="mb-4">
               <p className="text-lg font-medium">Name: {data.name}</p>
@@ -47,6 +52,7 @@ export default function App() {
             <p className="mb-4 text-gray-700">No user match found.</p>
           )}
 
+          {/* Device Info */}
           <div className="bg-gray-100 rounded-xl p-4 mb-4">
             <h3 className="text-lg font-semibold mb-2">Device Info</h3>
             <p>Device Name: {data.deviceName || data.deviceInfo?.deviceName}</p>
@@ -55,35 +61,55 @@ export default function App() {
             <p>Track ID: {data.trackId || data.deviceInfo?.trackId}</p>
           </div>
 
+          {/* Captured Images */}
           <div>
             <h3 className="text-lg font-semibold mb-3">Captured Images</h3>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Origin */}
               {data.images?.originPic && (
                 <div className="bg-gray-50 p-2 rounded-xl shadow">
                   <p className="text-sm mb-2 text-center">Origin</p>
                   <img
                     src={data.images.originPic}
                     className="rounded-xl object-cover w-full h-40"
+                    alt="Origin Capture"
                   />
                 </div>
               )}
 
+              {/* Body */}
               {data.images?.bodyPic && (
                 <div className="bg-gray-50 p-2 rounded-xl shadow">
                   <p className="text-sm mb-2 text-center">Body</p>
                   <img
                     src={data.images.bodyPic}
                     className="rounded-xl object-cover w-full h-40"
+                    alt="Body Capture"
                   />
                 </div>
               )}
 
+              {/* Face */}
               {data.images?.facePic && (
                 <div className="bg-gray-50 p-2 rounded-xl shadow">
                   <p className="text-sm mb-2 text-center">Face</p>
                   <img
                     src={data.images.facePic}
                     className="rounded-xl object-cover w-full h-40"
+                    alt="Face Capture"
+                  />
+                </div>
+              )}
+
+              {/* Person Photo */}
+              {data.images?.personPhoto && (
+                <div className="bg-gray-50 p-2 rounded-xl shadow">
+                  <p className="text-sm mb-2 text-center">Person Photo</p>
+                  <img
+                    src={data.images.personPhoto}
+                    className="rounded-xl object-cover w-full h-40"
+                    alt="Person Registered Photo"
                   />
                 </div>
               )}
