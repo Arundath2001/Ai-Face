@@ -8,11 +8,11 @@ const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use((req, res, next) => {
-    console.log('🔥 HIT:', req.method, req.url);
-    console.log('🔵 HEADERS:', req.headers);
-    next();
-});
+// app.use((req, res, next) => {
+//     console.log('🔥 HIT:', req.method, req.url);
+//     console.log('🔵 HEADERS:', req.headers);
+//     next();
+// });
 
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
 const uploadsDir = path.join(__dirname, 'uploads');
